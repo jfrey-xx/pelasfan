@@ -19,8 +19,13 @@ int fanSpeed = 0;
 
 // switch state
 volatile unsigned long previousMillis = 0;
-// sleep cycle
-const long interval = 4000;
+// sleep cycles, see watchdog duration
+const int fanOnCycle = 2;
+const int fanOffCycle = 4;
+// current cycle reguarding watchdog (so time passes by even when on interrupt)
+bool cycleOn = true;
+
+// if fan actually on/off
 bool fanOn = true;
 
 // handle interrupt
@@ -33,8 +38,8 @@ bool manualFan = false;
 // currently asleep or not
 bool asleep = false;
 
-
-volatile int f_wdt = 1;
+// watchdoc cycles
+volatile int f_wdt = 0;
 
 // This is executed when watchdog timed out.
 ISR(WDT_vect)
@@ -46,11 +51,7 @@ ISR(WDT_vect)
     Serial.println("timer but arleady awake");
   }
 
-  if (f_wdt == 0)
-  {
-    f_wdt = 1;
-  }
-
+  f_wdt++;
 }
 
 void setup() {
@@ -140,18 +141,25 @@ void checkSwitch() {
 }
 
 void checkTimer() {
-  unsigned long currentMillis = millis();
 
-  if ( f_wdt = 1) {
+  if (cycleOn && f_wdt >= fanOnCycle) {
+    Serial.println("=== going down ===");
     f_wdt = 0;
+    cycleOn = !cycleOn;
+    // only mess up fan if on automatic
+    if (!interruptOn) {
+      fanSetOn();
+    }
   }
 
-  if (currentMillis - previousMillis >= interval)
-  {
-    Serial.println("=== interval ===");
-    // save the last time state was switched
-    previousMillis = currentMillis;
-    fanToggle();
+  if (!cycleOn && f_wdt >= fanOffCycle) {
+    Serial.println("=== going up ===");
+    f_wdt = 0;
+    cycleOn = !cycleOn;
+    // only mess up fan if on automatic
+    if (!interruptOn) {
+      fanSetOff();
+    }
   }
 
   // only sleep if no manual interrupt going on
