@@ -20,7 +20,7 @@ bool fanOn = true;
 
 // handle interrupt
 volatile unsigned long previousInterrupt = 0;
-const long bounceTime = 500; // how much time before we consider interrupt as outdated
+const long bounceTime = 1000; // how much time before we consider interrupt as outdated
 volatile bool interruptOn = false;
 
 bool manualFan = false;
@@ -28,7 +28,7 @@ bool manualFan = false;
 void setup() {
 
   // will use bounce of LOW state to maintain fan on
-  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, HIGH);
+  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
 
   pinMode(fanSpdPin, OUTPUT);
 
@@ -61,31 +61,32 @@ void loop() {
     }
   }
 
+  if (interruptOn &&  !manualFan ) {
+    manualFan = true;
+    Serial.println("start interrupt");
+  }
+
+
   // check current state of switch
   int val = digitalRead(buttonPin);
 
-  // debounce interrupt
-  if (interruptOn && val == LOW && currentMillis - previousInterrupt < bounceTime)
-  {
-    interruptOn = false;
-    attachInterrupt(digitalPinToInterrupt(buttonPin), blink, HIGH);
-    //Serial.println("false interrupt");
+  // reset counter while LOW, or enable new wait for counter
+  if (val == LOW) {
+    previousInterrupt =  millis();
+  }
+  else {
+    attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
   }
 
   // true interrupt, let's do something
   if (interruptOn && currentMillis - previousInterrupt >= bounceTime)
   {
     interruptOn = false;
-    manualFan = true;
-    Serial.println("true interrupt");
+    manualFan = false;
+    Serial.println("stop interrupt");
   }
 
-  // back to formal state
-  if (manualFan && val == LOW) {
-    Serial.println("STOP interrupt");
-    manualFan = false;
-    attachInterrupt(digitalPinToInterrupt(buttonPin), blink, HIGH);
-  }
+
 
   interrupts();
 
