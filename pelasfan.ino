@@ -41,6 +41,8 @@ bool asleep = false;
 // watchdoc cycles
 volatile int f_wdt = 0;
 
+bool isInit = false;
+
 // This is executed when watchdog timed out.
 ISR(WDT_vect)
 {
@@ -60,7 +62,6 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
 
   pinMode(fanSpdPin, OUTPUT);
-
 
   // for debug
   pinMode(ledPin, OUTPUT);
@@ -168,8 +169,24 @@ void checkTimer() {
 
 }
 
+// set fan in right state at boot
+void onStart() {
+  if (!isInit) {
+    Serial.println("init...");
+    // checking init state
+    int val = digitalRead(buttonPin);
+    if (val == LOW) {
+      Serial.println("manual switch ON on start");
+      interruptOn = true;
+    }
+    isInit = true;
+  }
+}
+
 void loop() {
   noInterrupts();
+
+  onStart();
 
   checkTimer();
 
