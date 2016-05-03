@@ -21,7 +21,9 @@ bool fanOn = true;
 
 void setup() {
   pinMode(fanSpdPin, OUTPUT);
-  
+
+  // for debug
+  pinMode(fanSpdPin, OUTPUT);
   Serial.begin(9600);
 }
 
@@ -38,9 +40,11 @@ void loop() {
     fanOn = !fanOn;
     if (fanOn) {
       setSpeed(maxFanSpeed);
+      digitalWrite(13, HIGH);
     }
     else {
       setSpeed(0);
+      digitalWrite(13, LOW);
     }
   }
 
