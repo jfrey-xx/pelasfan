@@ -23,10 +23,13 @@ volatile unsigned long previousMillis = 0;
 const int fanOnCycle = 2;
 const int fanOffCycle = 4;
 // current cycle reguarding watchdog (so time passes by even when on interrupt)
-bool cycleOn = true;
+bool cycleOn = false;
 
 // if fan actually on/off
-bool fanOn = true;
+bool fanOn = false;
+
+// watchdoc cycles, starting just prior to on
+volatile int f_wdt = fanOffCycle;
 
 // handle interrupt
 volatile unsigned long previousInterrupt = 0;
@@ -38,10 +41,6 @@ bool manualFan = false;
 // currently asleep or not
 bool asleep = false;
 
-// watchdoc cycles
-volatile int f_wdt = 0;
-
-bool isInit = false;
 
 // This is executed when watchdog timed out.
 ISR(WDT_vect)
@@ -111,12 +110,12 @@ void sleepNow()  {
 void checkSwitch() {
   unsigned long currentMillis = millis();
 
-
+  // interrupt has been set, will enable fan
   if (interruptOn &&  !manualFan ) {
     manualFan = true;
+    fanSet(true);
     Serial.println("start interrupt");
   }
-
 
   // check current state of switch
   int val = digitalRead(buttonPin);
@@ -129,14 +128,11 @@ void checkSwitch() {
     attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
   }
 
-  // true interrupt, let's do something
+  // for real we left LOW state (and interrupt), leave it to timer
   if (interruptOn && currentMillis - previousInterrupt >= bounceTime)
   {
     interruptOn = false;
     manualFan = false;
-    Serial.println("stop interrupt, go to sleep");
-    sleepNow();
-    Serial.println("after sleep");
   }
 
 }
@@ -169,25 +165,13 @@ void checkTimer() {
 
 }
 
-// set fan in right state at boot
-void onStart() {
-  if (!isInit) {
-    Serial.println("init...");
-    // checking init state
-    int val = digitalRead(buttonPin);
-    if (val == LOW) {
-      Serial.println("manual switch ON on start");
-      interruptOn = true;
-    }
-    isInit = true;
-  }
-}
-
 void loop() {
   noInterrupts();
 
-  onStart();
+  // first check manual switch
+  checkSwitch();
 
+  // if not manual normal state will be resolve in checkTimer()
   checkTimer();
 
   interrupts();
