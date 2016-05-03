@@ -63,7 +63,7 @@ void setup() {
 
 
   // for debug
-  pinMode(fanSpdPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
   Serial.begin(9600);
 
 
@@ -146,24 +146,21 @@ void checkTimer() {
     Serial.println("=== going down ===");
     f_wdt = 0;
     cycleOn = !cycleOn;
-    // only mess up fan if on automatic
-    if (!interruptOn) {
-      fanSetOn();
-    }
   }
 
   if (!cycleOn && f_wdt >= fanOffCycle) {
     Serial.println("=== going up ===");
     f_wdt = 0;
     cycleOn = !cycleOn;
-    // only mess up fan if on automatic
-    if (!interruptOn) {
-      fanSetOff();
-    }
   }
 
-  // only sleep if no manual interrupt going on
+  // only sleep and mess up with fan if no manual interrupt going on
   if (!interruptOn) {
+    // need to change state
+    if (cycleOn  != fanOn) {
+      fanSet(cycleOn);
+      Serial.println("-- change fan");
+    }
     Serial.println("periodic mode, go to sleep");
     sleepNow();
     Serial.println("after sleep in checkTimer");
@@ -172,46 +169,23 @@ void checkTimer() {
 }
 
 void loop() {
-
   noInterrupts();
-
-
-  //  unsigned long currentMillis = millis();
-  //
-  //
-  //  if (currentMillis - previousMillis >= interval)
-  //  {
-  //    Serial.println("interval");
-  //    // save the last time state was switched
-  //    previousMillis = currentMillis;
-  //    fanToggle();
-  //  }
 
   checkTimer();
 
-
   interrupts();
-
 }
 
-void fanToggle() {
-  fanOn = !fanOn;
-  if (fanOn) {
-    fanSetOn();
+void fanSet(bool flag) {
+  if (flag) {
+    setSpeed(maxFanSpeed);
+    digitalWrite(13, HIGH);
   }
   else {
-    fanSetOff();
+    setSpeed(0);
+    digitalWrite(13, LOW);
   }
-}
-
-void fanSetOn() {
-  setSpeed(maxFanSpeed);
-  digitalWrite(13, HIGH);
-}
-
-void fanSetOff() {
-  setSpeed(0);
-  digitalWrite(13, LOW);
+  fanOn = flag;
 }
 
 void setSpeed(int fspeed) {
