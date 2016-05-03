@@ -1,6 +1,8 @@
 
 // bigup to http://www.plastibots.com/index.php/2016/02/27/lulzbot-mini-arduino-temp-monitor-fan-led-controller/
 
+#include <avr/sleep.h>
+
 #define fanSpdPin 3// was5  //PWM out to control fan speed (blue wire on 4 pin fans) 
 
 #define ledPin 13 // default LED
@@ -37,6 +39,29 @@ void setup() {
   pinMode(fanSpdPin, OUTPUT);
   Serial.begin(9600);
 }
+
+// go sleep
+void sleepNow()  {
+  Serial.println("go to sleep");
+  Serial.flush();
+  // deep sleep
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  sleep_enable();
+
+  interrupts();
+  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
+
+  // go to sleep
+  sleep_mode();
+  // awake
+
+  // disable sleep after awake as in tuto (?)
+  sleep_disable();
+
+  Serial.println("awakes");
+
+}
+
 
 void loop() {
 
@@ -84,6 +109,8 @@ void loop() {
     interruptOn = false;
     manualFan = false;
     Serial.println("stop interrupt");
+    sleepNow();
+    Serial.println("after sleep");
   }
 
 
