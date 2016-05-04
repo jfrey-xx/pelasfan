@@ -23,8 +23,8 @@ int fanSpeed = 0;
 // switch state
 volatile unsigned long previousMillis = 0;
 // sleep cycles, see watchdog duration
-const int fanOnCycle = 10;
-const int fanOffCycle = 15;
+const int fanOnCycle = 1;
+const int fanOffCycle = 1;
 // current cycle reguarding watchdog (so time passes by even when on interrupt)
 bool cycleOn = false;
 
@@ -82,9 +82,9 @@ void setup() {
   */
   WDTCSR |= (1 << WDCE) | (1 << WDE);
   /* set new watchdog timeout prescaler value */
-  // WDTCSR = 1 << WDP0 | 1 << WDP3; /* 8.0 seconds */
+  WDTCSR = 1 << WDP0 | 1 << WDP3; /* 8.0 seconds */
   // WDTCSR = 1 << WDP3; /* 4.0 seconds */
-  WDTCSR = 1 << WDP1 | 1 << WDP2; /* 1.0 seconds */
+  // WDTCSR = 1 << WDP1 | 1 << WDP2; /* 1.0 seconds */
   /* Enable the WD interrupt (note no reset). */
   WDTCSR |= _BV(WDIE);
 
@@ -93,7 +93,7 @@ void setup() {
   power_spi_disable(); // SPI
   // power_timer0_disable();// Timer 0, used for millis() and delay()
   power_timer1_disable();// Timer 1
-  // power_timer2_disable();// Timer 2, PWM 3 & 11
+  power_timer2_disable();// Timer 2, PWM 3 & 11 -- PMW re-enable if needed while controlling fanspeed
   power_twi_disable(); // TWI (I2C)
 
   // get rid of serial port if not needed
@@ -112,9 +112,15 @@ void debugMsg(String msg) {
 void sleepNow()  {
   debugMsg("go to sleep");
   Serial.flush();
-  // deep sleep
-  // set_sleep_mode(SLEEP_MODE_PWR_DOWN); // deeper but no PWM
-  set_sleep_mode(SLEEP_MODE_PWR_SAVE);
+
+  // if going sleep on ON phase, need PWM
+  if (cycleOn) {
+    set_sleep_mode(SLEEP_MODE_PWR_SAVE);
+  }
+  // otherwise, can go really deep
+  else {
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  }
   sleep_enable();
 
   interrupts();
@@ -216,7 +222,15 @@ void fanSet(bool flag) {
   fanOn = flag;
 }
 
+// handle fanspeed, enable PWM if needed
 void setSpeed(int fspeed) {
+  if (fspeed == 0 || fspeed == 255) {
+    // for full OFF or ON, do not need PMW
+    power_timer2_disable();
+  }
+  else {
+    power_timer2_enable();
+  }
   analogWrite(fanSpdPin, fspeed);
 }
 
