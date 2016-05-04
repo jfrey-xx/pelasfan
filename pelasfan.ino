@@ -46,7 +46,7 @@ bool manualFan = false;
 bool asleep = false;
 
 // enable / disable output to serial port
-const bool debug = true;
+const bool debug = false;
 
 // This is executed when watchdog timed out.
 ISR(WDT_vect)
@@ -113,7 +113,7 @@ void watchdog_int_disable()
 void setup() {
 
   // will use bounce of LOW state to maintain fan on
-  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
+  // attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
 
   pinMode(fanSpdPin, OUTPUT);
 
@@ -273,7 +273,8 @@ void setSpeed(int fspeed) {
 void blink() {
   interruptOn = true;
   previousInterrupt =  millis();
-  debugMsg("interrupt");
+  // debugMsg("interrupt");
+  detachInterrupt(digitalPinToInterrupt(buttonPin));
 }
 
 
