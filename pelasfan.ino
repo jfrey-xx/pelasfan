@@ -3,6 +3,7 @@
 // http://playground.arduino.cc/Learning/ArduinoSleepCode
 // http://donalmorrissey.blogspot.fr/2010/04/sleeping-arduino-part-5-wake-up-via.html
 // http://manicdee.livejournal.com/97726.html
+// https://github.com/lopenlab/atmega_power_save/blob/master/interrupt_power_save.ino
 
 #include <avr/sleep.h>
 #include <avr/power.h>
@@ -23,7 +24,7 @@ int fanSpeed = 0;
 // switch state
 volatile unsigned long previousMillis = 0;
 // sleep cycles, see watchdog duration
-const int fanOnCycle = 1;
+const int fanOnCycle =  1;
 const int fanOffCycle = 1;
 // current cycle reguarding watchdog (so time passes by even when on interrupt)
 bool cycleOn = false;
@@ -36,7 +37,7 @@ volatile int f_wdt = fanOffCycle;
 
 // handle interrupt
 volatile unsigned long previousInterrupt = 0;
-const long bounceTime = 1000; // how much time before we consider interrupt as outdated
+const long bounceTime = 2000; // how much time before we consider interrupt as outdated
 volatile bool interruptOn = false;
 
 bool manualFan = false;
@@ -45,7 +46,7 @@ bool manualFan = false;
 bool asleep = false;
 
 // enable / disable output to serial port
-const bool debug = true;
+const bool debug = false;
 
 // This is executed when watchdog timed out.
 ISR(WDT_vect)
@@ -59,9 +60,6 @@ ISR(WDT_vect)
 
   f_wdt++;
 }
-
-
-// https://github.com/lopenlab/atmega_power_save/blob/master/interrupt_power_save.ino
 
 /*
    Prescale values:
@@ -146,6 +144,9 @@ void setup() {
   }
 
   debugMsg("setup done");
+
+  // hotfix, time to load new program
+  delay(5000);
 }
 
 void debugMsg(String msg) {
@@ -160,32 +161,24 @@ void sleepNow()  {
   debugMsg("go to sleep");
 
   // if going sleep on ON phase, need PWM
-  //  if (cycleOn) {
-  //    debugMsg("light sleep");
-  //    set_sleep_mode(SLEEP_MODE_PWR_SAVE);
-  //  }
-  //  // otherwise, can go really deep
-  //  else {
-  //    debugMsg("deep sleep");
-  //    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  //  }
+  if (cycleOn) {
+    debugMsg("light sleep");
+    set_sleep_mode(SLEEP_MODE_PWR_SAVE);
+  }
+  // otherwise, can go really deep
+  else {
+    debugMsg("deep sleep");
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  }
 
 
-
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   sleep_enable();
-  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
-
-
-
-  // interrupts();
-
+  //attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
 
   // go to sleep
   asleep = true;
   sleep_mode();
-  detachInterrupt(digitalPinToInterrupt(buttonPin));
-  //sleep_cpu();
+  //detachInterrupt(digitalPinToInterrupt(buttonPin));
   // awake
   asleep = false;
 
@@ -200,6 +193,15 @@ void sleepNow()  {
 void checkSwitch() {
   unsigned long currentMillis = millis();
 
+  // check current state of switch
+  int val = digitalRead(buttonPin);
+
+  // reset counter while LOW, or enable new wait for counter
+  if (val == LOW) {
+    previousInterrupt =  currentMillis;
+    interruptOn = true;
+  }
+
   // interrupt has been set, will enable fan
   if (interruptOn &&  !manualFan ) {
     manualFan = true;
@@ -207,16 +209,6 @@ void checkSwitch() {
     debugMsg("start interrupt");
   }
 
-  // check current state of switch
-  int val = digitalRead(buttonPin);
-
-  // reset counter while LOW, or enable new wait for counter
-  if (val == LOW) {
-    previousInterrupt =  currentMillis;
-  }
-  else {
-    //  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
-  }
 
   // for real we left LOW state (and interrupt), leave it to timer
   if (interruptOn && currentMillis - previousInterrupt >= bounceTime)
@@ -256,15 +248,11 @@ void checkTimer() {
 }
 
 void loop() {
-  //noInterrupts();
-
   // first check manual switch
   checkSwitch();
 
   // if not manual normal state will be resolve in checkTimer()
   checkTimer();
-
-  //interrupts();
 }
 
 void fanSet(bool flag) {
@@ -287,9 +275,8 @@ void setSpeed(int fspeed) {
 
 void blink() {
   interruptOn = true;
-  //detachInterrupt(digitalPinToInterrupt(buttonPin));
   previousInterrupt =  millis();
-  debugMsg("interrupt");
+  //debugMsg("interrupt");
 }
 
 
