@@ -71,6 +71,9 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   if (debug) {
     Serial.begin(9600);
+    while (!Serial) {
+      ; // wait for serial port to connect. Needed for Leonardo only
+    }
   }
 
 
