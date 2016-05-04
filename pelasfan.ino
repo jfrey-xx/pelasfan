@@ -23,9 +23,9 @@ int fanSpeed = 0;
 
 // switch state
 volatile unsigned long previousMillis = 0;
-// sleep cycles, see watchdog duration
-const int fanOnCycle =  1;
-const int fanOffCycle = 1;
+// sleep cycles, see watchdog duration -- 30minutes cycles with 8s watchdog
+const int fanOnCycle =  4;
+const int fanOffCycle = 221;
 // current cycle reguarding watchdog (so time passes by even when on interrupt)
 bool cycleOn = false;
 
@@ -46,7 +46,7 @@ bool manualFan = false;
 bool asleep = false;
 
 // enable / disable output to serial port
-const bool debug = false;
+const bool debug = true;
 
 // This is executed when watchdog timed out.
 ISR(WDT_vect)
@@ -127,7 +127,7 @@ void setup() {
   }
 
   /* Watchdog consumed about 5 uA. Comment out to get down to ~0.5 uA*/
-  watchdog_setup(7);
+  watchdog_setup(9);
   watchdog_int_enable();
 
   // disable everything not needed
@@ -144,9 +144,6 @@ void setup() {
   }
 
   debugMsg("setup done");
-
-  // hotfix, time to load new program
-  delay(5000);
 }
 
 void debugMsg(String msg) {
@@ -173,13 +170,13 @@ void sleepNow()  {
 
 
   sleep_enable();
-  //attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
+  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
 
   // go to sleep
   asleep = true;
   sleep_mode();
-  //detachInterrupt(digitalPinToInterrupt(buttonPin));
   // awake
+  detachInterrupt(digitalPinToInterrupt(buttonPin));
   asleep = false;
 
   // disable sleep after awake as in tuto (?)
@@ -276,7 +273,7 @@ void setSpeed(int fspeed) {
 void blink() {
   interruptOn = true;
   previousInterrupt =  millis();
-  //debugMsg("interrupt");
+  debugMsg("interrupt");
 }
 
 
