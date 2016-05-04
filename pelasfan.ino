@@ -44,15 +44,17 @@ bool manualFan = false;
 // currently asleep or not
 bool asleep = false;
 
+// enable / disable output to serial port
+const bool debug = true;
 
 // This is executed when watchdog timed out.
 ISR(WDT_vect)
 {
   if (asleep) {
-    Serial.println("out of sleep from timer");
+    debugMsg("out of sleep from timer");
   }
   else {
-    Serial.println("timer but arleady awake");
+    debugMsg("timer but arleady awake");
   }
 
   f_wdt++;
@@ -67,7 +69,9 @@ void setup() {
 
   // for debug
   pinMode(ledPin, OUTPUT);
-  Serial.begin(9600);
+  if (debug) {
+    Serial.begin(9600);
+  }
 
 
   /*** Setup the WDT ***/
@@ -87,16 +91,26 @@ void setup() {
   // disable everything not needed
   power_adc_disable(); // ADC converter
   power_spi_disable(); // SPI
-  // power_usart0_disable();// Serial (USART)
   // power_timer0_disable();// Timer 0, used for millis() and delay()
   power_timer1_disable();// Timer 1
   // power_timer2_disable();// Timer 2, PWM 3 & 11
   power_twi_disable(); // TWI (I2C)
+
+  // get rid of serial port if not needed
+  if (!debug) {
+    power_usart0_disable();// Serial (USART)
+  }
+}
+
+void debugMsg(String msg) {
+  if (debug) {
+    Serial.println(msg);
+  }
 }
 
 // go sleep
 void sleepNow()  {
-  Serial.println("go to sleep");
+  debugMsg("go to sleep");
   Serial.flush();
   // deep sleep
   // set_sleep_mode(SLEEP_MODE_PWR_DOWN); // deeper but no PWM
@@ -115,7 +129,7 @@ void sleepNow()  {
   // disable sleep after awake as in tuto (?)
   sleep_disable();
 
-  Serial.println("awakes");
+  debugMsg("awakes");
 
 }
 
@@ -127,7 +141,7 @@ void checkSwitch() {
   if (interruptOn &&  !manualFan ) {
     manualFan = true;
     fanSet(true);
-    Serial.println("start interrupt");
+    debugMsg("start interrupt");
   }
 
   // check current state of switch
@@ -153,13 +167,13 @@ void checkSwitch() {
 void checkTimer() {
 
   if (cycleOn && f_wdt >= fanOnCycle) {
-    Serial.println("=== going down ===");
+    debugMsg("=== going down ===");
     f_wdt = 0;
     cycleOn = !cycleOn;
   }
 
   if (!cycleOn && f_wdt >= fanOffCycle) {
-    Serial.println("=== going up ===");
+    debugMsg("=== going up ===");
     f_wdt = 0;
     cycleOn = !cycleOn;
   }
@@ -169,11 +183,11 @@ void checkTimer() {
     // need to change state
     if (cycleOn  != fanOn) {
       fanSet(cycleOn);
-      Serial.println("-- change fan");
+      debugMsg("-- change fan");
     }
-    Serial.println("periodic mode, go to sleep");
+    debugMsg("periodic mode, go to sleep");
     sleepNow();
-    Serial.println("after sleep in checkTimer");
+    debugMsg("after sleep in checkTimer");
   }
 
 }
@@ -211,7 +225,7 @@ void blink() {
   interruptOn = true;
   detachInterrupt(digitalPinToInterrupt(buttonPin));
   previousInterrupt =  millis();
-  //Serial.println("interrupt");
+  //debugMsg("interrupt");
 }
 
 
