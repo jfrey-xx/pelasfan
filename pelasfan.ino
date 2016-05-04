@@ -170,17 +170,22 @@ void sleepNow()  {
   //    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   //  }
 
+
+
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-
   sleep_enable();
-
-  interrupts();
   attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
+
+
+
+  // interrupts();
+
 
   // go to sleep
   asleep = true;
-  //sleep_mode();
-  sleep_cpu();
+  sleep_mode();
+  detachInterrupt(digitalPinToInterrupt(buttonPin));
+  //sleep_cpu();
   // awake
   asleep = false;
 
@@ -210,7 +215,7 @@ void checkSwitch() {
     previousInterrupt =  currentMillis;
   }
   else {
-    attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
+    //  attachInterrupt(digitalPinToInterrupt(buttonPin), blink, FALLING);
   }
 
   // for real we left LOW state (and interrupt), leave it to timer
@@ -244,14 +249,14 @@ void checkTimer() {
       debugMsg("-- change fan");
     }
     debugMsg("periodic mode, go to sleep");
-    //sleepNow();
+    sleepNow();
     debugMsg("after sleep in checkTimer");
   }
 
 }
 
 void loop() {
-  noInterrupts();
+  //noInterrupts();
 
   // first check manual switch
   checkSwitch();
@@ -259,7 +264,7 @@ void loop() {
   // if not manual normal state will be resolve in checkTimer()
   checkTimer();
 
-  interrupts();
+  //interrupts();
 }
 
 void fanSet(bool flag) {
@@ -282,9 +287,9 @@ void setSpeed(int fspeed) {
 
 void blink() {
   interruptOn = true;
-  detachInterrupt(digitalPinToInterrupt(buttonPin));
+  //detachInterrupt(digitalPinToInterrupt(buttonPin));
   previousInterrupt =  millis();
-  //debugMsg("interrupt");
+  debugMsg("interrupt");
 }
 
 
