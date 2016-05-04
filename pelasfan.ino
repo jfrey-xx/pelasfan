@@ -93,7 +93,7 @@ void setup() {
   power_spi_disable(); // SPI
   // power_timer0_disable();// Timer 0, used for millis() and delay()
   power_timer1_disable();// Timer 1
-  power_timer2_disable();// Timer 2, PWM 3 & 11 -- PMW re-enable if needed while controlling fanspeed
+  // power_timer2_disable();// Timer 2, PWM 3 & 11
   power_twi_disable(); // TWI (I2C)
 
   // get rid of serial port if not needed
@@ -105,20 +105,22 @@ void setup() {
 void debugMsg(String msg) {
   if (debug) {
     Serial.println(msg);
+    Serial.flush();
   }
 }
 
 // go sleep
 void sleepNow()  {
   debugMsg("go to sleep");
-  Serial.flush();
 
   // if going sleep on ON phase, need PWM
   if (cycleOn) {
+    debugMsg("light sleep");
     set_sleep_mode(SLEEP_MODE_PWR_SAVE);
   }
   // otherwise, can go really deep
   else {
+    debugMsg("deep sleep");
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   }
   sleep_enable();
@@ -222,15 +224,8 @@ void fanSet(bool flag) {
   fanOn = flag;
 }
 
-// handle fanspeed, enable PWM if needed
+// handle fanspeed
 void setSpeed(int fspeed) {
-  if (fspeed == 0 || fspeed == 255) {
-    // for full OFF or ON, do not need PMW
-    power_timer2_disable();
-  }
-  else {
-    power_timer2_enable();
-  }
   analogWrite(fanSpdPin, fspeed);
 }
 
