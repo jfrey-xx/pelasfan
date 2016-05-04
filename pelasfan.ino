@@ -2,8 +2,11 @@
 // bigup to http://www.plastibots.com/index.php/2016/02/27/lulzbot-mini-arduino-temp-monitor-fan-led-controller/
 // http://playground.arduino.cc/Learning/ArduinoSleepCode
 // http://donalmorrissey.blogspot.fr/2010/04/sleeping-arduino-part-5-wake-up-via.html
+// http://manicdee.livejournal.com/97726.html
 
 #include <avr/sleep.h>
+#include <avr/power.h>
+
 
 #define fanSpdPin 3// was5  //PWM out to control fan speed (blue wire on 4 pin fans) 
 
@@ -13,15 +16,15 @@
 
 // reduce fan speed
 // TODO: modulate according to actual RPM, especially when powered by more than 12v
-#define maxFanSpeed 200
+#define maxFanSpeed 225
 
 int fanSpeed = 0;
 
 // switch state
 volatile unsigned long previousMillis = 0;
 // sleep cycles, see watchdog duration
-const int fanOnCycle = 2;
-const int fanOffCycle = 4;
+const int fanOnCycle = 10;
+const int fanOffCycle = 15;
 // current cycle reguarding watchdog (so time passes by even when on interrupt)
 bool cycleOn = false;
 
@@ -80,6 +83,15 @@ void setup() {
   WDTCSR = 1 << WDP1 | 1 << WDP2; /* 1.0 seconds */
   /* Enable the WD interrupt (note no reset). */
   WDTCSR |= _BV(WDIE);
+
+  // disable everything not needed
+  power_adc_disable(); // ADC converter
+  power_spi_disable(); // SPI
+  // power_usart0_disable();// Serial (USART)
+  // power_timer0_disable();// Timer 0, used for millis() and delay()
+  power_timer1_disable();// Timer 1
+  // power_timer2_disable();// Timer 2, PWM 3 & 11
+  power_twi_disable(); // TWI (I2C)
 }
 
 // go sleep
@@ -87,7 +99,8 @@ void sleepNow()  {
   Serial.println("go to sleep");
   Serial.flush();
   // deep sleep
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  // set_sleep_mode(SLEEP_MODE_PWR_DOWN); // deeper but no PWM
+  set_sleep_mode(SLEEP_MODE_PWR_SAVE);
   sleep_enable();
 
   interrupts();
